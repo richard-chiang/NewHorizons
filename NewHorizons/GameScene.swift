@@ -37,6 +37,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var asteroidsDodgedLabel = SKLabelNode(text: "Asteroids dodged")
     var asteroidsDodgedImage = SKSpriteNode(imageNamed: "AsteroidsDodged")
     
+    let playButton = SKSpriteNode(imageNamed: "playButton")
+    let pauseButton = SKSpriteNode(imageNamed: "pause")
+    
     override func didMoveToView(view: SKView) {
         physicsWorld.contactDelegate = self
         sceneSetup()
@@ -46,14 +49,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-       /* Called when a touch begins */
+        /* Called when a touch begins */
         let touch = touches.first!
         let touchLocation = touch.locationInNode(self)
+        let node = nodeAtPoint(touchLocation)
         
-        let moveTo = SKAction.moveTo(touchLocation, duration: 1.0)
-        satellite.runAction(moveTo)
+        if let name = node.name {
+            switch name {
+            case "pauseButton":
+                pauseGame()
+                showPlayButton()
+            case "playButton":
+                showPauseButton()
+                resumeGame()
+            default:
+                let moveTo = SKAction.moveTo(touchLocation, duration: 1.0)
+                satellite.runAction(moveTo)
+            }
+            
+        }
     }
-   
+    
     override func update(currentTime: CFTimeInterval) {
         /* Called before each frame is rendered */
         enumerateChildNodesWithName("Asteroid") {
@@ -70,7 +86,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func didBeginContact(contact: SKPhysicsContact) {
         let victims = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
-    
+        
         switch victims {
         case bitMask.satellite.rawValue | bitMask.asteroid.rawValue:
             contact.bodyA.node?.removeFromParent()
@@ -146,6 +162,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         asteroidsDodgedCountLabel.position = CGPoint(x: frame.size.width / 15.5, y: frame.size.height - 700)
         asteroidsDodgedCountLabel.zPosition = 1
         addChild(asteroidsDodgedCountLabel)
+        
+        pauseButton.name = "pauseButton"
+        pauseButton.zPosition = 1
+        pauseButton.position = CGPoint(x: frame.size.width * 0.94, y: frame.size.height - 80)
+        addChild(pauseButton)
+        
+        playButton.name = "playButton"
+        playButton.zPosition = 1
+        playButton.position = CGPoint(x: frame.size.width * 0.94, y: frame.size.height - 80)
+        playButton.hidden = true
+        addChild(playButton)
     }
     
     // setup player here
@@ -161,7 +188,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             body.contactTestBitMask = bitMask.asteroid.rawValue
             body.collisionBitMask = bitMask.frame.rawValue
         }
-
+        
         addChild(satellite)
     }
     
@@ -216,6 +243,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         minuteTimeLabel.text = "\(minute)"
         hourTimeLabel.text = "\(hour)"
         dayTimeLabel.text = "\(day)"
+    }
+    
+    func pauseGame() {
+        view!.paused = true
+    }
+    
+    func showPlayButton() {
+        pauseButton.hidden = true
+        playButton.hidden = false
+    }
+    
+    func resumeGame() {
+        view!.paused = false
+    }
+    
+    func showPauseButton() {
+        playButton.hidden = true
+        pauseButton.hidden = false
     }
     
 }
