@@ -20,11 +20,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     let satellite = SKSpriteNode(imageNamed: "sat2")
     
+    var missionDurationLabel = SKLabelNode(text: "Mission Duration")
+    var missionMinuteLabel = SKLabelNode(text: "Minute")
+    var missionHourLabel = SKLabelNode(text: "Hour")
+    var missionDayLabel = SKLabelNode(text: "Day")
+    
+    var day = 0
+    var hour = 0
+    var minute = 0
+    var minuteTimeLabel = SKLabelNode(text: "0")
+    var hourTimeLabel = SKLabelNode(text: "0")
+    var dayTimeLabel = SKLabelNode(text: "0")
+    
+    var dodgedAsteroids = 0
+    var asteroidsDodgedCountLabel = SKLabelNode(text: "0")
+    var asteroidsDodgedLabel = SKLabelNode(text: "Asteroids dodged")
+    var asteroidsDodgedImage = SKSpriteNode(imageNamed: "AsteroidsDodged")
+    
     override func didMoveToView(view: SKView) {
         physicsWorld.contactDelegate = self
         sceneSetup()
         setupPlayer()
         spawnObstacles()
+        startMissionTime()
     }
     
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
@@ -38,6 +56,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
    
     override func update(currentTime: CFTimeInterval) {
         /* Called before each frame is rendered */
+        enumerateChildNodesWithName("Asteroid") {
+            asteroid, _ in
+            
+            if asteroid.position.y <= 3 {
+                self.dodgedAsteroids++
+                self.asteroidsDodgedCountLabel.text = "\(self.dodgedAsteroids)"
+                asteroid.removeFromParent()
+            }
+        }
     }
     
     
@@ -47,6 +74,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         switch victims {
         case bitMask.satellite.rawValue | bitMask.asteroid.rawValue:
             contact.bodyA.node?.removeFromParent()
+            removeActionForKey("missionDurationTime")
+            removeActionForKey("spawnAsteroid")
+            enumerateChildNodesWithName("Asteroid") { (asteroid, _) in
+                asteroid.name = "dontCountMe"
+            }
         default:
             break
         }
@@ -63,6 +95,57 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func sceneSetup() {
         backgroundColor = UIColor.blackColor()
         physicsWorld.gravity = CGVectorMake(0, -0.9)
+        
+        missionDurationLabel.fontColor = UIColor.redColor()
+        missionDurationLabel.fontSize = 30
+        missionDurationLabel.fontName = "Helvetica Neue"
+        missionDurationLabel.position = CGPoint(x: frame.size.width / 2, y: frame.size.height - 45)
+        addChild(missionDurationLabel)
+        
+        missionMinuteLabel.fontSize = 30
+        missionMinuteLabel.fontName = "Helvetica Neue"
+        missionMinuteLabel.position = CGPoint(x: frame.size.width / 2 + 150, y: frame.size.height - 85)
+        addChild(missionMinuteLabel)
+        
+        missionHourLabel.fontSize = 30
+        missionHourLabel.fontName = "Helvetica Neue"
+        missionHourLabel.position = CGPoint(x: frame.size.width / 2, y: frame.size.height - 85)
+        addChild(missionHourLabel)
+        
+        missionDayLabel.fontSize = 30
+        missionDayLabel.fontName = "Helvetica Neue"
+        missionDayLabel.position = CGPoint(x: frame.size.width / 2 - 150, y: frame.size.height - 85)
+        addChild(missionDayLabel)
+        
+        minuteTimeLabel.fontSize = 30
+        minuteTimeLabel.fontName = "Helvetica Neue"
+        minuteTimeLabel.position = CGPoint(x: frame.size.width / 2 + 150, y: frame.size.height - 120)
+        addChild(minuteTimeLabel)
+        
+        hourTimeLabel.fontSize = 30
+        hourTimeLabel.fontName = "Helvetica Neue"
+        hourTimeLabel.position = CGPoint(x: frame.size.width / 2, y: frame.size.height - 120)
+        addChild(hourTimeLabel)
+        
+        dayTimeLabel.fontSize = 30
+        dayTimeLabel.fontName = "Helvetica Neue"
+        dayTimeLabel.position = CGPoint(x: frame.size.width / 2 - 150, y: frame.size.height - 120)
+        addChild(dayTimeLabel)
+        
+        asteroidsDodgedImage.position = CGPoint(x: frame.size.width / 5.7, y: frame.size.height - 700)
+        addChild(asteroidsDodgedImage)
+        
+        asteroidsDodgedLabel.fontSize = 28
+        asteroidsDodgedLabel.fontName = "Helvetica Neue"
+        asteroidsDodgedLabel.position = CGPoint(x: frame.size.width / 4.7, y: frame.size.height - 750)
+        asteroidsDodgedLabel.zPosition = 1
+        addChild(asteroidsDodgedLabel)
+        
+        asteroidsDodgedCountLabel.fontSize = 30
+        asteroidsDodgedCountLabel.fontName = "Helvetica Neue"
+        asteroidsDodgedCountLabel.position = CGPoint(x: frame.size.width / 15.5, y: frame.size.height - 700)
+        asteroidsDodgedCountLabel.zPosition = 1
+        addChild(asteroidsDodgedCountLabel)
     }
     
     // setup player here
@@ -89,10 +172,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func generateAsteroids() {
         let spawnRandomAsteroid = SKAction.runBlock(spawnAsteroid)
-        let waitForOneMinute = SKAction.waitForDuration(1.0)
-        let spawnSequence = SKAction.sequence([spawnRandomAsteroid, waitForOneMinute])
+        let waitForOneSecond = SKAction.waitForDuration(1.0)
+        let spawnSequence = SKAction.sequence([spawnRandomAsteroid, waitForOneSecond])
         let continuousSpawn = SKAction.repeatActionForever(spawnSequence)
-        runAction(continuousSpawn)
+        runAction(continuousSpawn, withKey: "spawnAsteroid")
     }
     
     func spawnAsteroid() {
@@ -105,8 +188,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             body.categoryBitMask = bitMask.asteroid.rawValue
             body.contactTestBitMask = bitMask.satellite.rawValue
         }
-        
+        asteroid.name = "Asteroid"
         addChild(asteroid)
+    }
+    
+    func startMissionTime() {
+        let updateMissionTimeLabel = SKAction.runBlock(updateMissionTime)
+        let waitForOneSecond = SKAction.waitForDuration(1.0)
+        let updateTimeSequence = SKAction.sequence([updateMissionTimeLabel, waitForOneSecond])
+        let timer = SKAction.repeatActionForever(updateTimeSequence)
+        runAction(timer, withKey: "missionDurationTime")
+    }
+    
+    func updateMissionTime() {
+        minute++
+        
+        if minute == 60 {
+            hour++
+            minute = 0
+        }
+        
+        if hour == 24 {
+            day++
+            hour = 0
+        }
+        
+        minuteTimeLabel.text = "\(minute)"
+        hourTimeLabel.text = "\(hour)"
+        dayTimeLabel.text = "\(day)"
     }
     
 }
